@@ -30,7 +30,7 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy){
 }
 
 void *buddy_malloc(struct buddy_pool *pool, size_t size){
-  printf("malloc start");
+  printf("malloc start/n");
   if(size == 0){
     return NULL;
   }
@@ -39,19 +39,23 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
     return NULL;
   }
 
-  size_t kval = btok(size);
-  unsigned int block_flag = 0; 
-  while(block_flag == 0);
+    size_t kval = btok(size);
   struct avail *free_block = NULL;
 
   for(size_t i = kval; i <= pool->kval_m; i++){
-    if(pool->avail->next != &pool->avail[i]){ block_flag =1;}
 
-    if(block_flag ==1){
+    if(pool->avail[i].next != &pool->avail[i]){
       free_block = pool->avail[i].next;
       break;
     }
+
   }
+
+  if((free_block =NULL)){
+    errno = ENOMEM;
+    return NULL;
+  }
+
 
   if(free_block->kval > kval){
     while(free_block->kval){
@@ -85,34 +89,37 @@ void buddy_free(struct buddy_pool *pool, void *ptr){
 
   struct avail *buddy_block = buddy_calc(pool, block);
   bool buddy_flag = true; 
-  while(block->kval == buddy_block->kval && buddy_flag == true){
+  while(buddy_flag == true){
     
-    if(buddy_block->tag != BLOCK_AVAIL){
-      buddy_flag = false;
-    }
+    if(buddy_block->kval == block->kval && buddy_block->tag != BLOCK_AVAIL){
 
-    if(buddy_block < block){
-      block->prev = buddy_block->prev;
-      block->next= buddy_block->next;
+      if(buddy_block < block){
+        block->prev = buddy_block->prev;
+        block->next= buddy_block->next;
 
-      buddy_block->next->prev = block;
-      buddy_block->prev->next = block;
+        buddy_block->next->prev = block;
+        buddy_block->prev->next = block;
 
-      block->kval++;
-    }
+        block->kval++;
+      }
 
-    if(buddy_block> block){
-      buddy_block->prev = block->prev;
-      buddy_block->next = block->next;
-      
-      block->next->prev = buddy_block;
-      block->prev->next = buddy_block;
-      
-      buddy_block-> kval++;
+      if(buddy_block> block){
+        buddy_block->prev = block->prev;
+        buddy_block->next = block->next;
+        
+        block->next->prev = buddy_block;
+        block->prev->next = buddy_block;
+        
+        buddy_block-> kval++;
+      }
+      buddy_block = buddy_calc(pool, buddy_block);
   }
-  buddy_calc(pool, buddy_block);
   
+  else{
+  buddy_flag = false;
 }
+}
+
 struct avail *list = &pool-> avail[block->kval];
 
 block->prev = list;
@@ -193,7 +200,7 @@ void buddy_init(struct buddy_pool *pool, size_t size){
     perror("buddy: could not allocate memory pool");
   }
   
-  for(size_t i = 0; i < pool->kval_m; i++){
+  for(size_t i = 0; i <+ pool->kval_m; i++){
     pool->avail[i].next = &pool->avail[i];
     pool->avail[i].prev = &pool->avail[i];
     pool->avail[i].kval = i;
