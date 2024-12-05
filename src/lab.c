@@ -33,7 +33,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
   if(size == 0){
     return NULL;
   }
-  if(pool = NULL){
+  if((pool = NULL)){
     errno = ENOMEM;
     return NULL;
   }
@@ -47,7 +47,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
     if(pool->avail->next != &pool->avail[i]){ block_flag =1;}
 
     if(block_flag ==1){
-      block_flag = pool->avail[i].next;
+      free_block = pool->avail[i].next;
       break;
     }
   }
@@ -70,8 +70,9 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
     free_block->prev->next =free_block->next;
     free_block->next->prev =free_block->prev;
 
-    return (void *)(free_block+1);
+    
   }
+  return (void *)(free_block+1);  
 }
 
 void buddy_free(struct buddy_pool *pool, void *ptr){
