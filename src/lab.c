@@ -34,12 +34,9 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
   if(size == 0){
     return NULL;
   }
-  if((pool = NULL)){
-    errno = ENOMEM;
-    return NULL;
-  }
 
-    size_t kval = btok(size);
+  size_t kval = btok(size);
+  if(kval <SMALLEST_K){ kval = SMALLEST_K;}
   struct avail *free_block = NULL;
 
   for(size_t i = kval; i <= pool->kval_m; i++){
@@ -51,18 +48,21 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
 
   }
 
-  if((free_block =NULL)){
-    errno = ENOMEM;
-    return NULL;
-  }
-
-
-  if(free_block->kval > kval){
-    while(free_block->kval){
+  if((free_block)){
+      while(free_block->kval > kval){
       struct avail *buddy_block = buddy_calc(pool, free_block);
       free_block->kval--;
 
+
+
       buddy_block->tag = BLOCK_AVAIL;
+      buddy_block->kval = free_block->kval;
+
+      if (buddy_block->next == NULL || buddy_block->prev == NULL) {
+        errno = ENOMEM;
+        return NULL;
+      }
+      
       buddy_block->next = pool->avail[free_block->kval].next;
       buddy_block->prev = &pool->avail[free_block->kval];
 
@@ -76,9 +76,19 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
     free_block->next->prev =free_block->prev;
 
     
+  
+    printf("malloc success");
+    return (void *)(free_block+1);  
+
   }
-  printf("malloc success");
-  return (void *)(free_block+1);  
+  else{
+    errno = ENOMEM;
+    return NULL;
+  }
+
+
+  
+
 }
 
 void buddy_free(struct buddy_pool *pool, void *ptr){
