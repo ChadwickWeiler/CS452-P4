@@ -30,6 +30,7 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy){
 }
 
 void *buddy_malloc(struct buddy_pool *pool, size_t size){
+  printf("malloc start");
   if(size == 0){
     return NULL;
   }
@@ -72,6 +73,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
 
     
   }
+  printf("malloc success");
   return (void *)(free_block+1);  
 }
 
@@ -121,8 +123,65 @@ list->next = block;
 }
 
 void *buddy_realloc(struct buddy_pool *pool, void *ptr, size_t size){
+  
+  if(size == 0 && ptr != NULL){
+    buddy_free(pool, ptr);
 
+    return NULL;
+ }
+
+ if(ptr == NULL){
+    return buddy_malloc(pool, size);
+
+ }
+
+ struct avail *block = (struct avail *)ptr -1;
+
+ size_t new_k = btok(size);
+
+ if(new_k <=SMALLEST_K){new_k =SMALLEST_K;}
+ if(block->kval >= new_k){
+  bool kval_flag = true;
+  while ((kval_flag = true)){
+    struct avail *buddy_split = buddy_calc(pool, block);
+
+    buddy_split->tag = BLOCK_AVAIL;
+    buddy_split-> kval = block->kval-1;
+
+    buddy_split->prev = &pool->avail[buddy_split->kval];
+    buddy_split->next = pool->avail[buddy_split->kval].next;
+
+    pool->avail[buddy_split->kval].next = buddy_split;
+    buddy_split->next->prev = buddy_split;
+
+    block->kval--;
+    if(block->kval < new_k){kval_flag = false;}
+    
+  }
+  return ptr;
+ }
+
+ else{
+    void *newblock_ptr = buddy_malloc(pool, size);
+    if(newblock_ptr == NULL){ return NULL;}
+
+    size_t prev_size = 1 << block->kval;
+
+    size_t byte_copy;
+    if(prev_size >= size){byte_copy = size;}
+    else{byte_copy = prev_size;}
+
+    for(size_t i = 0; i < byte_copy; i++){
+      ((unsigned char *)newblock_ptr)[i]= ((unsigned char *)ptr)[i];
+
+    }
+    buddy_free(pool,ptr);
+
+    return newblock_ptr;
+ }
 }
+ 
+
 
 void buddy_init(struct buddy_pool *pool, size_t size){
   if(size == 0) {size = UINT64_C(1) << DEFAULT_K;}
@@ -157,7 +216,6 @@ void buddy_destroy(struct buddy_pool *pool){
     perror("buddy: destroy Failed");
   }
 }
-
 
 
 int myMain(int argc, char** argv);
