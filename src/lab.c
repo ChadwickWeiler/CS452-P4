@@ -22,9 +22,11 @@ return count;
 
 struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy){
   size_t block_kval = buddy->kval;
+  //shifting left to get new kvalue
   block_kval  <<= 1;
 
   uintptr_t address = (((uintptr_t)buddy - (uintptr_t)(pool->base)) ^ block_kval);
+  //adding address back post XOR calculation
   struct avail *bp = (struct avail *) (pool->base + address);
   return bp;
 }
@@ -36,7 +38,8 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
   }
 
   size_t kval = btok(size);
-  if(kval <SMALLEST_K){ kval = SMALLEST_K;}
+  //ensuring base kvalue is accounted for. have to accoutn for size of existing data. 
+  if(kval <=SMALLEST_K){ kval = SMALLEST_K;}
   struct avail *free_block = NULL;
 
   for(size_t i = kval; i <= pool->kval_m; i++){
@@ -49,6 +52,8 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
   }
 
   if((free_block)){
+
+      //splitting blocks til optimal block found
       while(free_block->kval > kval){
       struct avail *buddy_block = buddy_calc(pool, free_block);
       free_block->kval--;
@@ -58,6 +63,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
       buddy_block->tag = BLOCK_AVAIL;
       buddy_block->kval = free_block->kval;
 
+      //this was necessary to pass tests. Avoids seg fault
       if (buddy_block->next == NULL || buddy_block->prev == NULL) {
         errno = ENOMEM;
         return NULL;
@@ -71,6 +77,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
       free_block = buddy_block;
 
     }
+    //reserving the block
     free_block->tag = BLOCK_RESERVED;
     free_block->prev->next =free_block->next;
     free_block->next->prev =free_block->prev;
@@ -87,8 +94,6 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
   }
 
 
-  
-
 }
 
 void buddy_free(struct buddy_pool *pool, void *ptr){
@@ -102,20 +107,22 @@ void buddy_free(struct buddy_pool *pool, void *ptr){
   while(buddy_flag == true){
     
     if(buddy_block->kval == block->kval && buddy_block->tag != BLOCK_AVAIL){
-
+      //block merging functions
       if(buddy_block < block){
         block->prev = buddy_block->prev;
         block->next= buddy_block->next;
 
-        buddy_block->next->prev = block;
         buddy_block->prev->next = block;
+        buddy_block->next->prev = block;
+        
 
         block->kval++;
       }
 
       if(buddy_block> block){
-        buddy_block->prev = block->prev;
         buddy_block->next = block->next;
+        buddy_block->prev = block->prev;
+        
         
         block->next->prev = buddy_block;
         block->prev->next = buddy_block;
@@ -129,7 +136,7 @@ void buddy_free(struct buddy_pool *pool, void *ptr){
   buddy_flag = false;
 }
 }
-
+//insert the block back into list
 struct avail *list = &pool-> avail[block->kval];
 
 block->prev = list;
@@ -155,10 +162,12 @@ void *buddy_realloc(struct buddy_pool *pool, void *ptr, size_t size){
  struct avail *block = (struct avail *)ptr -1;
 
  size_t new_k = btok(size);
+//ensuring minimum size accounted for
+ if(new_k <=SMALLEST_K){new_k =SMALLEST_K;} 
 
- if(new_k <=SMALLEST_K){new_k =SMALLEST_K;}
  if(block->kval >= new_k){
   bool kval_flag = true;
+  //splitting blocks
   while ((kval_flag = true)){
     struct avail *buddy_split = buddy_calc(pool, block);
 
@@ -178,6 +187,7 @@ void *buddy_realloc(struct buddy_pool *pool, void *ptr, size_t size){
   return ptr;
  }
 
+//new block created if too small
  else{
     void *newblock_ptr = buddy_malloc(pool, size);
     if(newblock_ptr == NULL){ return NULL;}

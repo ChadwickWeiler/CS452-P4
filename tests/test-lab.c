@@ -80,6 +80,25 @@ void test_buddy_malloc_one_byte(void)
 }
 
 /**
+ * Test allocating 3 bytes to make sure we split the blocks all the way down
+ * to MIN_K size. Then free the block and ensure we end up with a full
+ * memory pool again
+ */
+void test_buddy_malloc_three_bytes(void)
+{
+  fprintf(stderr, "->Test allocating and freeing 3 byte\n");
+  struct buddy_pool pool;
+  int kval = MIN_K;
+  size_t size = UINT64_C(1) << kval;
+  buddy_init(&pool, size);
+  void *mem = buddy_malloc(&pool, 3);
+  //Make sure correct kval was allocated
+  buddy_free(&pool, mem);
+  check_buddy_pool_full(&pool);
+  buddy_destroy(&pool);
+}
+
+/**
  * Tests the allocation of one massive block that should consume the entire memory
  * pool and makes sure that after the pool is empty we correctly fail subsequent calls.
  */
@@ -144,6 +163,7 @@ int main(void) {
   UNITY_BEGIN();
   RUN_TEST(test_buddy_init);
   RUN_TEST(test_buddy_malloc_one_byte);
+   RUN_TEST(test_buddy_malloc_three_bytes);
   RUN_TEST(test_buddy_malloc_one_large);
 return UNITY_END();
 }
