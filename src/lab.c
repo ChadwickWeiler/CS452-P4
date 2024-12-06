@@ -1,3 +1,7 @@
+/*
+* Authors: Chadwick Weiler, Amit Jain
+* CS452 OS Fall Semester 2024
+*/
 #include "lab.h"
 #include <sys/mman.h>
 #include <stdint.h>
@@ -6,12 +10,8 @@
 
 
 
-/*
-*Amit Suggests printing buddy list for debugging. 
-*/
 
-/* Buddy calculations only work if the base address is zero. Subract the address value, then add it back after XOR funciton
-*/
+
 
 size_t btok(size_t bytes){
 unsigned int count = 0;
@@ -24,6 +24,9 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy){
   size_t block_kval = buddy->kval;
   //shifting left to get new kvalue
   block_kval  <<= 1;
+
+/* Buddy calculations only work if the base address is zero. Subract the address value, then add it back after XOR funciton
+*/
 
   uintptr_t address = (((uintptr_t)buddy - (uintptr_t)(pool->base)) ^ block_kval);
   //adding address back post XOR calculation
