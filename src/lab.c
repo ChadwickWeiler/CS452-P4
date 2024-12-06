@@ -35,7 +35,7 @@ struct avail *buddy_calc(struct buddy_pool *pool, struct avail *buddy){
 }
 
 void *buddy_malloc(struct buddy_pool *pool, size_t size){
-  printf("malloc start/n");
+  //printf("malloc start/n");
   if(size == 0){
     return NULL;
   }
@@ -87,7 +87,7 @@ void *buddy_malloc(struct buddy_pool *pool, size_t size){
 
     
   
-    printf("malloc success");
+    //printf("malloc success");
     return (void *)(free_block+1);  
 
   }
